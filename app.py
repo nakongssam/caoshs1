@@ -701,45 +701,45 @@ def page_admin_dashboard():
         st.markdown("---")
         st.subheader("📋 보낸 메시지 관리")
         
-        # 전체 메시지 가져오기 (페이징)
-        all_data = []
-        page_size = 1000
-        offset = 0
-        while True:
-            batch = (supabase.table("personal_messages")
-                     .select("*")
-                     .order("created_at", desc=True)
-                     .range(offset, offset + page_size - 1)
-                     .execute())
-            if not batch.data:
-                break
-            all_data.extend(batch.data)
-            if len(batch.data) < page_size:
-                break
-            offset += page_size
+        # 고유 제목 목록 가져오기
+        all_titles_raw = (supabase.table("personal_messages")
+                          .select("title")
+                          .order("created_at", desc=True)
+                          .execute())
+        
+        if all_titles_raw.data:
+            # 중복 제거하면서 순서 유지
+            seen = set()
+            unique_titles = []
+            for row in all_titles_raw.data:
+                t = row["title"]
+                if t not in seen:
+                    seen.add(t)
+                    unique_titles.append(t)
 
-        if all_data:
-            # 같은 제목 + 같은 시간(분 단위)으로 그룹핑
-            from collections import OrderedDict
-            groups = OrderedDict()
-            for m in all_data:
-                # 분 단위까지 잘라서 같은 시점에 보낸 것끼리 묶기
-                time_key = m["created_at"][:16] if m.get("created_at") else ""
-                group_key = f"{m['title']}||{time_key}"
-                if group_key not in groups:
-                    groups[group_key] = []
-                groups[group_key].append(m)
-
-            for group_key, msgs in groups.items():
-                title_part, time_part = group_key.split("||")
-                date_display = time_part[:10] if time_part else ""
-                label = f"📦 {title_part} ({date_display}) — {len(msgs)}명"
+            for title_name in unique_titles:
+                # 해당 제목의 메시지 전체 가져오기
+                title_msgs = (supabase.table("personal_messages")
+                              .select("*")
+                              .eq("title", title_name)
+                              .order("grade")
+                              .order("class_num")
+                              .order("student_num")
+                              .execute())
+                
+                if not title_msgs.data:
+                    continue
+                
+                msgs = title_msgs.data
+                first_msg = msgs[0]
+                date_display = first_msg["created_at"][:10] if first_msg.get("created_at") else ""
+                label = f"📦 {title_name} ({date_display}) — {len(msgs)}명"
+                
                 with st.expander(label):
-                    # 대상 목록을 반별로 정리
-                    sorted_msgs = sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
-                    
                     # 반별로 묶어서 보여주기
                     from itertools import groupby
+                    sorted_msgs = sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
+                    
                     st.markdown("**📌 대상:**")
                     for cls_key, cls_msgs in groupby(sorted_msgs, key=lambda x: f"{x['grade']}-{x['class_num']}반"):
                         cls_list = list(cls_msgs)
@@ -753,10 +753,9 @@ def page_admin_dashboard():
                             st.text(f"{m['grade']}-{m['class_num']}반 {m['student_num']}번: {code_preview}")
 
                     # 일괄 수정 폼
-                    first_msg = msgs[0]
                     group_id = first_msg['id'][:8]
                     with st.form(f"edit_group_{group_id}"):
-                        edit_title = st.text_input("제목 (일괄 수정)", value=title_part, key=f"gt_{group_id}")
+                        edit_title = st.text_input("제목 (일괄 수정)", value=title_name, key=f"gt_{group_id}")
                         edit_message = st.text_area("공통 메시지 (일괄 수정)", value=first_msg.get("message", ""), key=f"gm_{group_id}")
                         col_save, col_del = st.columns(2)
                         with col_save:
@@ -765,16 +764,14 @@ def page_admin_dashboard():
                             delete = st.form_submit_button("🗑️ 전체 삭제", use_container_width=True)
 
                     if save:
-                        for m in msgs:
-                            supabase.table("personal_messages").update({
-                                "title": edit_title,
-                                "message": edit_message
-                            }).eq("id", m["id"]).execute()
+                        supabase.table("personal_messages").update({
+                            "title": edit_title,
+                            "message": edit_message
+                        }).eq("title", title_name).execute()
                         st.success(f"✅ {len(msgs)}건 일괄 수정 완료!")
                         st.rerun()
                     if delete:
-                        for m in msgs:
-                            supabase.table("personal_messages").delete().eq("id", m["id"]).execute()
+                        supabase.table("personal_messages").delete().eq("title", title_name).execute()
                         st.success(f"🗑️ {len(msgs)}건 일괄 삭제 완료!")
                         st.rerun()
 
