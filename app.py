@@ -233,7 +233,7 @@ def page_login():
     st.markdown('<div class="sub-title">학번과 비밀번호를 입력해주세요</div>', unsafe_allow_html=True)
 
     with st.form("login_form"):
-        user_id = st.text_input("학번 (예: 10101 = 1학년1반1번)")
+        user_id = st.text_input("학번 (예: 1학년 1반 1번 = 10101)")
         password = st.text_input("비밀번호", type="password")
         submitted = st.form_submit_button("로그인", use_container_width=True)
 
