@@ -599,7 +599,7 @@ def page_admin_dashboard():
             """)
 
         with st.form("csv_bulk_form"):
-            csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 개인 인증코드")
+            csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 4월 개인 인증코드")
             csv_message = st.text_area("공통 메시지 (선택)", key="csv_msg", placeholder="예: 아래 코드를 사용하세요.")
             csv_file = st.file_uploader("CSV 파일 업로드", type=["csv"], key="csv_upload")
             csv_submit = st.form_submit_button("CSV로 일괄 전송", use_container_width=True)
@@ -760,8 +760,26 @@ def page_admin_dashboard():
 
             st.markdown("---")
 
+            # 반 선택 필터
+            class_list = sorted(set(f"{s['grade']}-{s['class_num']}반" for s in students.data))
+            class_list.insert(0, "전체")
+            selected_class = st.selectbox("학급 선택", class_list, key="class_filter")
+
+            # 필터링
+            if selected_class == "전체":
+                filtered = students.data
+            else:
+                g = int(selected_class.split("-")[0])
+                c = int(selected_class.split("-")[1].replace("반", ""))
+                filtered = [s for s in students.data if s["grade"] == g and s["class_num"] == c]
+
+            # 번호순 정렬
+            filtered = sorted(filtered, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
+
+            st.caption(f"📋 {len(filtered)}명")
+
             # 학생 목록
-            for s in students.data:
+            for s in filtered:
                 pw_status = " 🔴초기화됨" if s.get("pw_reset") else ""
                 label = f"{s['grade']}-{s['class_num']}반 {s['student_num']}번 {s['name']} (학번: {s['user_id']}){pw_status}"
                 with st.expander(label):
