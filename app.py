@@ -599,7 +599,7 @@ def page_admin_dashboard():
             """)
 
         with st.form("csv_bulk_form"):
-            csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 4월 개인 인증코드")
+            csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 개인 인증코드")
             csv_message = st.text_area("공통 메시지 (선택)", key="csv_msg", placeholder="예: 아래 코드를 사용하세요.")
             csv_file = st.file_uploader("CSV 파일 업로드", type=["csv"], key="csv_upload")
             csv_submit = st.form_submit_button("CSV로 일괄 전송", use_container_width=True)
