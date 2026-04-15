@@ -439,30 +439,10 @@ def page_student_dashboard():
             st.session_state.role = None
             st.rerun()
 
-    tab1, tab2, tab3 = st.tabs(["📢 전체 공지", "🔐 내 개인 코드", "⚙️ 내 정보"])
-
-    # ── 전체 공지 ──
-    with tab1:
-        notices = (supabase.table("notices")
-                   .select("*")
-                   .order("created_at", desc=True)
-                   .limit(20)
-                   .execute())
-        if notices.data:
-            for n in notices.data:
-                date_str = n["created_at"][:10] if n.get("created_at") else ""
-                st.markdown(f"""
-                <div class="notice-card">
-                    <h4>📌 {n['title']}</h4>
-                    <p>{n['content']}</p>
-                    <div class="notice-date">{date_str}</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("아직 공지가 없습니다.")
+    tab1, tab2, tab3 = st.tabs(["🔐 내 개인 코드", "📢 전체 공지", "⚙️ 내 정보"])
 
     # ── 개인 코드/메시지 ──
-    with tab2:
+    with tab1:
         messages = (supabase.table("personal_messages")
                     .select("*")
                     .eq("grade", grade)
@@ -486,6 +466,26 @@ def page_student_dashboard():
                 st.markdown(content_html, unsafe_allow_html=True)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
+
+    # ── 전체 공지 ──
+    with tab2:
+        notices = (supabase.table("notices")
+                   .select("*")
+                   .order("created_at", desc=True)
+                   .limit(20)
+                   .execute())
+        if notices.data:
+            for n in notices.data:
+                date_str = n["created_at"][:10] if n.get("created_at") else ""
+                st.markdown(f"""
+                <div class="notice-card">
+                    <h4>📌 {n['title']}</h4>
+                    <p>{n['content']}</p>
+                    <div class="notice-date">{date_str}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("아직 공지가 없습니다.")
 
     # ── 내 정보 수정 (4번 기능) ──
     with tab3:
