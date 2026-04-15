@@ -26,91 +26,207 @@ def hash_pw(password: str) -> str:
 # ─── 스타일 ───
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Gaegu:wght@400;700&display=swap');
 
+/* ─── 전역 스타일 ─── */
 html, body, [class*="css"] {
     font-family: 'Noto Sans KR', sans-serif;
 }
+
+/* Streamlit 기본 배경 커스텀 */
+.stApp {
+    background: linear-gradient(180deg, #FFF9F0 0%, #FFF0E6 50%, #FFE8D6 100%);
+}
+
+/* ─── 메인 타이틀 ─── */
 .main-title {
-    font-size: 2rem;
-    font-weight: 900;
+    font-family: 'Gaegu', cursive;
+    font-size: 2.4rem;
+    font-weight: 700;
     text-align: center;
-    padding: 1rem 0 0.5rem;
-    color: #1a1a2e;
+    padding: 0.8rem 0 0.3rem;
+    color: #5D4037;
+    letter-spacing: -0.5px;
 }
 .sub-title {
     text-align: center;
-    color: #6c757d;
+    color: #8D6E63;
     font-size: 0.95rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    font-weight: 400;
 }
+
+/* ─── 공지 카드 ─── */
 .notice-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #FF9A76 0%, #FFBA92 100%);
     color: white;
     padding: 1.2rem 1.5rem;
-    border-radius: 12px;
+    border-radius: 16px;
     margin-bottom: 0.8rem;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 154, 118, 0.25);
+    border: 2px solid rgba(255,255,255,0.3);
+    transition: transform 0.2s ease;
+}
+.notice-card:hover {
+    transform: translateY(-2px);
 }
 .notice-card h4 {
-    margin: 0 0 0.3rem 0;
+    margin: 0 0 0.4rem 0;
     font-weight: 700;
+    font-size: 1.05rem;
 }
 .notice-card p {
     margin: 0;
     font-size: 0.9rem;
-    opacity: 0.9;
+    opacity: 0.95;
+    line-height: 1.6;
 }
 .notice-date {
     font-size: 0.75rem;
     opacity: 0.7;
     margin-top: 0.5rem;
 }
+
+/* ─── 개인 코드 카드 ─── */
 .code-card {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    padding: 1rem 1.2rem;
-    border-radius: 0 8px 8px 0;
+    background: #FFFFFF;
+    border-left: 5px solid #FFB74D;
+    padding: 1.1rem 1.3rem;
+    border-radius: 0 14px 14px 0;
     margin-bottom: 0.8rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease;
+}
+.code-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 .code-card h4 {
-    margin: 0 0 0.3rem 0;
+    margin: 0 0 0.4rem 0;
     font-weight: 600;
-    color: #1a1a2e;
+    color: #5D4037;
+    font-size: 1rem;
 }
+
+/* ─── 코드 블록 ─── */
 .code-block {
-    background: #1a1a2e;
-    color: #a5d6a7;
-    padding: 0.8rem 1rem;
-    border-radius: 8px;
+    background: linear-gradient(135deg, #5D4037 0%, #4E342E 100%);
+    color: #FFE0B2;
+    padding: 0.9rem 1.1rem;
+    border-radius: 10px;
     font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     margin-top: 0.5rem;
     word-break: break-all;
     white-space: pre-wrap;
+    border: 1px solid rgba(255,224,178,0.2);
 }
+
+/* ─── 통계 박스 ─── */
 .stat-box {
-    background: #f0f2ff;
-    padding: 1rem;
-    border-radius: 10px;
+    background: #FFFFFF;
+    padding: 1.2rem;
+    border-radius: 14px;
     text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 2px solid #FFE0B2;
 }
 .stat-box h2 {
     margin: 0;
-    color: #667eea;
+    color: #FF8A65;
+    font-size: 1.8rem;
+    font-weight: 900;
 }
 .stat-box p {
-    margin: 0;
+    margin: 0.2rem 0 0;
     font-size: 0.85rem;
-    color: #6c757d;
+    color: #8D6E63;
 }
+
+/* ─── 비밀번호 초기화 배너 ─── */
 .reset-banner {
-    background: #fff3cd;
-    border: 1px solid #ffc107;
-    border-radius: 10px;
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+    border: 2px solid #FFB74D;
+    border-radius: 14px;
     padding: 1.5rem;
     text-align: center;
     margin-bottom: 1rem;
+    color: #5D4037;
+}
+
+/* ─── 웰컴 배너 ─── */
+.welcome-banner {
+    background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    border: 2px solid rgba(255,255,255,0.5);
+}
+.welcome-banner h3 {
+    margin: 0;
+    color: #5D4037;
+    font-family: 'Gaegu', cursive;
+    font-size: 1.4rem;
+}
+.welcome-banner p {
+    margin: 0.3rem 0 0;
+    color: #6D4C41;
+    font-size: 0.9rem;
+}
+
+/* ─── Streamlit 버튼 커스텀 ─── */
+.stButton > button {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+}
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+/* ─── Streamlit 폼 커스텀 ─── */
+.stForm {
+    background: #FFFFFF;
+    border-radius: 14px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid #FFE0B2;
+}
+
+/* ─── 탭 커스텀 ─── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 10px 10px 0 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* ─── Expander 커스텀 ─── */
+.streamlit-expanderHeader {
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 10px;
+}
+
+/* ─── 반응형 (모바일) ─── */
+@media (max-width: 768px) {
+    .main-title {
+        font-size: 1.8rem;
+    }
+    .notice-card {
+        padding: 1rem 1.2rem;
+    }
+    .code-card {
+        padding: 0.9rem 1rem;
+    }
+    .stat-box h2 {
+        font-size: 1.5rem;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -287,13 +403,19 @@ def page_student_dashboard():
     col1, col2 = st.columns([3, 1])
     with col1:
         st.markdown(f'<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="sub-title">{grade}학년 {class_num}반 {user["student_num"]}번 {user["name"]}</div>', unsafe_allow_html=True)
     with col2:
         if st.button("로그아웃"):
             st.session_state.logged_in = False
             st.session_state.user = None
             st.session_state.role = None
             st.rerun()
+
+    st.markdown(f"""
+    <div class="welcome-banner">
+        <h3>👋 {user["name"]}님, 반가워요!</h3>
+        <p>{grade}학년 {class_num}반 {user["student_num"]}번</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["📢 전체 공지", "🔐 내 개인 코드", "⚙️ 내 정보"])
 
