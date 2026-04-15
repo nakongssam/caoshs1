@@ -35,7 +35,7 @@ html, body, [class*="css"] {
 
 /* Streamlit 기본 배경 커스텀 */
 .stApp {
-    background: linear-gradient(180deg, #FFF9F0 0%, #FFF0E6 50%, #FFE8D6 100%);
+    background: linear-gradient(180deg, #FEFCF9 0%, #FDF9F3 50%, #FBF6EE 100%);
 }
 
 /* ─── 메인 타이틀 ─── */
