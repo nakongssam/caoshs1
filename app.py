@@ -760,9 +760,10 @@ def page_admin_dashboard():
 
             st.markdown("---")
 
-            # 반 선택 필터
-            class_list = sorted(set(f"{s['grade']}-{s['class_num']}반" for s in students.data))
-            class_list.insert(0, "전체")
+            # 반 선택 필터 (숫자순 정렬)
+            class_set = set((s['grade'], s['class_num']) for s in students.data)
+            class_sorted = sorted(class_set, key=lambda x: (x[0], x[1]))
+            class_list = ["전체"] + [f"{g}-{c}반" for g, c in class_sorted]
             selected_class = st.selectbox("학급 선택", class_list, key="class_filter")
 
             # 필터링
@@ -773,56 +774,21 @@ def page_admin_dashboard():
                 c = int(selected_class.split("-")[1].replace("반", ""))
                 filtered = [s for s in students.data if s["grade"] == g and s["class_num"] == c]
 
-            # 번호순 정렬
             filtered = sorted(filtered, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
-
             st.caption(f"📋 {len(filtered)}명")
 
-            # 학생 목록
+            # 학생 목록 (플랫 리스트)
             for s in filtered:
-                pw_status = " 🔴초기화됨" if s.get("pw_reset") else ""
-                label = f"{s['grade']}-{s['class_num']}반 {s['student_num']}번 {s['name']} (학번: {s['user_id']}){pw_status}"
-                with st.expander(label):
-                    # 정보 수정 폼
-                    with st.form(f"edit_student_{s['id']}"):
-                        edit_name = st.text_input("이름", value=s["name"], key=f"sn_{s['id']}")
-                        col_g, col_c, col_n = st.columns(3)
-                        with col_g:
-                            edit_grade = st.number_input("학년", min_value=1, max_value=3, value=s["grade"], key=f"sg_{s['id']}")
-                        with col_c:
-                            edit_class = st.number_input("반", min_value=1, max_value=20, value=s["class_num"], key=f"sc_{s['id']}")
-                        with col_n:
-                            edit_num = st.number_input("번호", min_value=1, max_value=50, value=s["student_num"], key=f"snum_{s['id']}")
-
-                        col_a, col_b, col_c = st.columns(3)
-                        with col_a:
-                            save_info = st.form_submit_button("💾 정보 수정", use_container_width=True)
-                        with col_b:
-                            reset_pw = st.form_submit_button("🔑 비번 초기화", use_container_width=True)
-                        with col_c:
-                            delete_student = st.form_submit_button("🗑️ 삭제", use_container_width=True)
-
-                    if save_info:
-                        new_user_id = f"{edit_grade}{edit_class:02d}{edit_num:02d}"
-                        supabase.table("students").update({
-                            "name": edit_name,
-                            "grade": edit_grade,
-                            "class_num": edit_class,
-                            "student_num": edit_num,
-                            "user_id": new_user_id
-                        }).eq("id", s["id"]).execute()
-                        st.success(f"✅ {edit_name} 정보 수정 완료! (새 학번: {new_user_id})")
+                pw_status = " 🔴" if s.get("pw_reset") else ""
+                col_info, col_manage, col_del = st.columns([6, 1, 1])
+                with col_info:
+                    st.markdown(f"{s['grade']}-{s['class_num']}반 {s['student_num']}번 {s['name']}{pw_status}")
+                with col_manage:
+                    if st.button("관리", key=f"manage_{s['id']}", use_container_width=True):
+                        st.session_state[f"show_edit_{s['id']}"] = not st.session_state.get(f"show_edit_{s['id']}", False)
                         st.rerun()
-
-                    if reset_pw:
-                        supabase.table("students").update({
-                            "password_hash": hash_pw(s["user_id"]),
-                            "pw_reset": True
-                        }).eq("id", s["id"]).execute()
-                        st.success(f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다! 학생이 로그인하면 새 비밀번호를 설정하게 됩니다.")
-                        st.rerun()
-
-                    if delete_student:
+                with col_del:
+                    if st.button("삭제", key=f"del_{s['id']}", use_container_width=True):
                         (supabase.table("personal_messages")
                          .delete()
                          .eq("grade", s["grade"])
@@ -832,6 +798,46 @@ def page_admin_dashboard():
                         supabase.table("students").delete().eq("id", s["id"]).execute()
                         st.success(f"🗑️ {s['name']} 삭제 완료")
                         st.rerun()
+
+                # 관리 패널 (버튼 누르면 펼쳐짐)
+                if st.session_state.get(f"show_edit_{s['id']}", False):
+                    with st.container():
+                        with st.form(f"edit_student_{s['id']}"):
+                            edit_name = st.text_input("이름", value=s["name"], key=f"sn_{s['id']}")
+                            col_g, col_c, col_n = st.columns(3)
+                            with col_g:
+                                edit_grade = st.number_input("학년", min_value=1, max_value=3, value=s["grade"], key=f"sg_{s['id']}")
+                            with col_c:
+                                edit_class = st.number_input("반", min_value=1, max_value=20, value=s["class_num"], key=f"sc_{s['id']}")
+                            with col_n:
+                                edit_num = st.number_input("번호", min_value=1, max_value=50, value=s["student_num"], key=f"snum_{s['id']}")
+                            col_a, col_b = st.columns(2)
+                            with col_a:
+                                save_info = st.form_submit_button("💾 정보 수정", use_container_width=True)
+                            with col_b:
+                                reset_pw = st.form_submit_button("🔑 비번 초기화", use_container_width=True)
+
+                        if save_info:
+                            new_user_id = f"{edit_grade}{edit_class:02d}{edit_num:02d}"
+                            supabase.table("students").update({
+                                "name": edit_name,
+                                "grade": edit_grade,
+                                "class_num": edit_class,
+                                "student_num": edit_num,
+                                "user_id": new_user_id
+                            }).eq("id", s["id"]).execute()
+                            st.success(f"✅ {edit_name} 정보 수정 완료! (새 학번: {new_user_id})")
+                            st.rerun()
+
+                        if reset_pw:
+                            supabase.table("students").update({
+                                "password_hash": hash_pw(s["user_id"]),
+                                "pw_reset": True
+                            }).eq("id", s["id"]).execute()
+                            st.success(f"🔑 {s['name']} 비밀번호 → 학번({s['user_id']})으로 초기화!")
+                            st.rerun()
+
+                    st.markdown("---")
         else:
             st.info("아직 가입한 학생이 없습니다.")
 
