@@ -157,22 +157,22 @@ html, body, [class*="css"] {
 /* ─── 웰컴 배너 ─── */
 .welcome-banner {
     background: linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%);
-    border-radius: 16px;
-    padding: 1.5rem;
+    border-radius: 12px;
+    padding: 0.7rem 1rem;
     text-align: center;
-    margin-bottom: 1.5rem;
-    border: 2px solid rgba(255,255,255,0.5);
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255,255,255,0.5);
 }
 .welcome-banner h3 {
     margin: 0;
     color: #5D4037;
     font-family: 'Gaegu', cursive;
-    font-size: 1.4rem;
+    font-size: 1.15rem;
 }
 .welcome-banner p {
-    margin: 0.3rem 0 0;
+    margin: 0.1rem 0 0;
     color: #6D4C41;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
 }
 
 /* ─── Streamlit 버튼 커스텀 ─── */
@@ -680,33 +680,39 @@ def page_admin_dashboard():
         all_msgs = (supabase.table("personal_messages")
                     .select("*")
                     .order("created_at", desc=True)
-                    .limit(200)
+                    .limit(500)
                     .execute())
         if all_msgs.data:
-            # 같은 제목 + 같은 날짜로 그룹핑
+            # 같은 제목 + 같은 시간(분 단위)으로 그룹핑
             from collections import OrderedDict
             groups = OrderedDict()
             for m in all_msgs.data:
-                date_str = m["created_at"][:10] if m.get("created_at") else ""
-                group_key = f"{m['title']}||{date_str}"
+                # 분 단위까지 잘라서 같은 시점에 보낸 것끼리 묶기
+                time_key = m["created_at"][:16] if m.get("created_at") else ""
+                group_key = f"{m['title']}||{time_key}"
                 if group_key not in groups:
                     groups[group_key] = []
                 groups[group_key].append(m)
 
             for group_key, msgs in groups.items():
-                title_part, date_part = group_key.split("||")
-                label = f"📦 {title_part} ({date_part}) — {len(msgs)}명"
+                title_part, time_part = group_key.split("||")
+                date_display = time_part[:10] if time_part else ""
+                label = f"📦 {title_part} ({date_display}) — {len(msgs)}명"
                 with st.expander(label):
-                    # 대상 목록 보기
-                    targets = ", ".join(
-                        f"{m['grade']}-{m['class_num']}반 {m['student_num']}번"
-                        for m in sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
-                    )
-                    st.caption(f"📌 대상: {targets}")
+                    # 대상 목록을 반별로 정리
+                    sorted_msgs = sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
+                    
+                    # 반별로 묶어서 보여주기
+                    from itertools import groupby
+                    st.markdown("**📌 대상:**")
+                    for cls_key, cls_msgs in groupby(sorted_msgs, key=lambda x: f"{x['grade']}-{x['class_num']}반"):
+                        cls_list = list(cls_msgs)
+                        nums = ", ".join(str(m['student_num']) + "번" for m in cls_list)
+                        st.caption(f"  {cls_key}: {nums}")
 
                     # 개별 코드 미리보기
                     with st.expander("👀 개인별 코드 확인", expanded=False):
-                        for m in sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num'])):
+                        for m in sorted_msgs:
                             code_preview = m.get('code', '-') or '-'
                             st.text(f"{m['grade']}-{m['class_num']}반 {m['student_num']}번: {code_preview}")
 
