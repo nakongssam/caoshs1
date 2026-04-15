@@ -5,8 +5,8 @@ from supabase import create_client, Client
 
 # ─── 페이지 설정 ───
 st.set_page_config(
-    page_title="우리반 알림장",
-    page_icon="📋",
+    page_title="천안오성고 1학년 알림장",
+    page_icon="🏫",
     layout="centered"
 )
 
@@ -104,6 +104,14 @@ html, body, [class*="css"] {
     font-size: 0.85rem;
     color: #6c757d;
 }
+.reset-banner {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,10 +129,10 @@ def get_admin_pw_hash():
 
 
 # ═══════════════════════════════════════
-#  회원가입
+#  회원가입 (비밀번호 설정)
 # ═══════════════════════════════════════
 def page_register():
-    st.markdown('<div class="main-title">📋 우리반 알림장</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">비밀번호 설정</div>', unsafe_allow_html=True)
 
     with st.form("register_form"):
@@ -151,10 +159,8 @@ def page_register():
             st.error("비밀번호는 4자 이상으로 설정해주세요.")
             return
 
-        # 학번 자동 생성 (예: 1학년 7반 1번 → 10701)
         user_id = f"{grade}{class_num:02d}{student_num:02d}"
 
-        # 같은 학년/반/번호 중복 확인
         dup = (supabase.table("students")
                .select("id")
                .eq("grade", grade)
@@ -165,7 +171,6 @@ def page_register():
             st.error("이미 가입된 학번입니다. 로그인해주세요.")
             return
 
-        # 가입
         supabase.table("students").insert({
             "user_id": user_id,
             "password_hash": hash_pw(password),
@@ -173,6 +178,7 @@ def page_register():
             "grade": grade,
             "class_num": class_num,
             "student_num": student_num,
+            "pw_reset": False,
             "created_at": datetime.now().isoformat()
         }).execute()
 
@@ -180,20 +186,60 @@ def page_register():
 
 
 # ═══════════════════════════════════════
+#  비밀번호 재설정 페이지 (초기화 후 학생이 새 비번 설정)
+# ═══════════════════════════════════════
+def page_reset_password():
+    user = st.session_state.user
+    st.markdown('<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="reset-banner">
+        ⚠️ <strong>비밀번호가 초기화되었습니다.</strong><br>
+        새 비밀번호를 설정해주세요.
+    </div>
+    """, unsafe_allow_html=True)
+
+    with st.form("reset_pw_form"):
+        new_pw = st.text_input("새 비밀번호", type="password")
+        new_pw_confirm = st.text_input("새 비밀번호 확인", type="password")
+        submitted = st.form_submit_button("비밀번호 변경", use_container_width=True)
+
+    if submitted:
+        if not new_pw or not new_pw_confirm:
+            st.error("비밀번호를 입력해주세요.")
+            return
+        if new_pw != new_pw_confirm:
+            st.error("비밀번호가 일치하지 않습니다.")
+            return
+        if len(new_pw) < 4:
+            st.error("비밀번호는 4자 이상으로 설정해주세요.")
+            return
+
+        supabase.table("students").update({
+            "password_hash": hash_pw(new_pw),
+            "pw_reset": False
+        }).eq("id", user["id"]).execute()
+
+        # 세션 업데이트
+        st.session_state.user["pw_reset"] = False
+        st.success("✅ 비밀번호가 변경되었습니다!")
+        st.rerun()
+
+
+# ═══════════════════════════════════════
 #  로그인
 # ═══════════════════════════════════════
 def page_login():
-    st.markdown('<div class="main-title">📋 우리반 알림장</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">로그인하여 공지와 개인 코드를 확인하세요</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">학번과 비밀번호를 입력해주세요</div>', unsafe_allow_html=True)
 
     with st.form("login_form"):
-        user_id = st.text_input("학번 (예: 10701 = 1학년7반1번)")
+        user_id = st.text_input("학번 (예: 10101 = 1학년1반1번)")
         password = st.text_input("비밀번호", type="password")
         submitted = st.form_submit_button("로그인", use_container_width=True)
 
     if submitted:
         if not user_id or not password:
-            st.error("아이디와 비밀번호를 입력해주세요.")
+            st.error("학번과 비밀번호를 입력해주세요.")
             return
 
         # 관리자 로그인
@@ -216,7 +262,7 @@ def page_login():
             st.session_state.role = "student"
             st.rerun()
         else:
-            st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
+            st.error("학번 또는 비밀번호가 올바르지 않습니다.")
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -240,7 +286,7 @@ def page_student_dashboard():
     # 헤더
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown(f'<div class="main-title">📋 우리반 알림장</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="sub-title">{grade}학년 {class_num}반 {user["student_num"]}번 {user["name"]}</div>', unsafe_allow_html=True)
     with col2:
         if st.button("로그아웃"):
@@ -249,7 +295,7 @@ def page_student_dashboard():
             st.session_state.role = None
             st.rerun()
 
-    tab1, tab2 = st.tabs(["📢 전체 공지", "🔐 내 개인 코드"])
+    tab1, tab2, tab3 = st.tabs(["📢 전체 공지", "🔐 내 개인 코드", "⚙️ 내 정보"])
 
     # ── 전체 공지 ──
     with tab1:
@@ -297,6 +343,49 @@ def page_student_dashboard():
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
+    # ── 내 정보 수정 (4번 기능) ──
+    with tab3:
+        st.subheader("내 정보 수정")
+        with st.form("edit_my_info"):
+            new_name = st.text_input("이름", value=user["name"])
+            st.caption(f"학번: {user['user_id']} (변경 불가)")
+            submitted = st.form_submit_button("정보 수정", use_container_width=True)
+
+        if submitted:
+            if not new_name:
+                st.error("이름을 입력해주세요.")
+            else:
+                supabase.table("students").update({
+                    "name": new_name
+                }).eq("id", user["id"]).execute()
+                st.session_state.user["name"] = new_name
+                st.success("✅ 정보가 수정되었습니다!")
+                st.rerun()
+
+        st.markdown("---")
+        st.subheader("비밀번호 변경")
+        with st.form("change_pw_form"):
+            current_pw = st.text_input("현재 비밀번호", type="password")
+            new_pw = st.text_input("새 비밀번호", type="password")
+            new_pw_confirm = st.text_input("새 비밀번호 확인", type="password")
+            pw_submitted = st.form_submit_button("비밀번호 변경", use_container_width=True)
+
+        if pw_submitted:
+            if not all([current_pw, new_pw, new_pw_confirm]):
+                st.error("모든 항목을 입력해주세요.")
+            elif hash_pw(current_pw) != user["password_hash"]:
+                st.error("현재 비밀번호가 올바르지 않습니다.")
+            elif new_pw != new_pw_confirm:
+                st.error("새 비밀번호가 일치하지 않습니다.")
+            elif len(new_pw) < 4:
+                st.error("비밀번호는 4자 이상으로 설정해주세요.")
+            else:
+                supabase.table("students").update({
+                    "password_hash": hash_pw(new_pw)
+                }).eq("id", user["id"]).execute()
+                st.session_state.user["password_hash"] = hash_pw(new_pw)
+                st.success("✅ 비밀번호가 변경되었습니다!")
+
 
 # ═══════════════════════════════════════
 #  관리자 대시보드
@@ -314,7 +403,9 @@ def page_admin_dashboard():
 
     tab1, tab2, tab3 = st.tabs(["📢 공지 관리", "💌 개인 메시지", "👥 학생 관리"])
 
-    # ── 공지 관리 ──
+    # ══════════════════════════
+    # ── 공지 관리 (수정 가능) ──
+    # ══════════════════════════
     with tab1:
         st.subheader("새 공지 작성")
         with st.form("notice_form"):
@@ -339,17 +430,30 @@ def page_admin_dashboard():
                    .execute())
         if notices.data:
             for n in notices.data:
-                col_a, col_b = st.columns([5, 1])
-                with col_a:
-                    date_str = n["created_at"][:10] if n.get("created_at") else ""
-                    st.markdown(f"**{n['title']}** ({date_str})")
-                    st.caption(n["content"][:100])
-                with col_b:
-                    if st.button("삭제", key=f"del_notice_{n['id']}"):
+                date_str = n["created_at"][:10] if n.get("created_at") else ""
+                with st.expander(f"📌 {n['title']} ({date_str})"):
+                    with st.form(f"edit_notice_{n['id']}"):
+                        edit_title = st.text_input("제목", value=n["title"], key=f"nt_{n['id']}")
+                        edit_content = st.text_area("내용", value=n.get("content", ""), key=f"nc_{n['id']}")
+                        col_save, col_del = st.columns(2)
+                        with col_save:
+                            save = st.form_submit_button("💾 수정 저장", use_container_width=True)
+                        with col_del:
+                            delete = st.form_submit_button("🗑️ 삭제", use_container_width=True)
+                    if save:
+                        supabase.table("notices").update({
+                            "title": edit_title,
+                            "content": edit_content
+                        }).eq("id", n["id"]).execute()
+                        st.success("수정 완료!")
+                        st.rerun()
+                    if delete:
                         supabase.table("notices").delete().eq("id", n["id"]).execute()
                         st.rerun()
 
-    # ── 개인 메시지 보내기 ──
+    # ══════════════════════════════════
+    # ── 개인 메시지 보내기 (수정 가능) ──
+    # ══════════════════════════════════
     with tab2:
         st.subheader("개인 코드/메시지 전송")
         st.caption("학생이 아직 가입하지 않아도 코드를 미리 등록할 수 있습니다.")
@@ -384,7 +488,6 @@ def page_admin_dashboard():
         st.subheader("📦 CSV로 일괄 전송")
         st.caption("CSV 파일을 업로드하면 학생별로 개인 코드를 자동 저장합니다. 학생 가입 전에도 가능!")
 
-        # CSV 양식 안내
         with st.expander("📄 CSV 파일 양식 보기"):
             st.markdown("""
             CSV 파일에 아래 열을 포함해주세요:
@@ -449,7 +552,43 @@ def page_admin_dashboard():
             except Exception as e:
                 st.error(f"CSV 처리 중 오류: {e}")
 
-    # ── 학생 관리 ──
+        # 보낸 메시지 목록 (수정/삭제 가능)
+        st.markdown("---")
+        st.subheader("📋 보낸 메시지 관리")
+        all_msgs = (supabase.table("personal_messages")
+                    .select("*")
+                    .order("created_at", desc=True)
+                    .limit(50)
+                    .execute())
+        if all_msgs.data:
+            for m in all_msgs.data:
+                date_str = m["created_at"][:10] if m.get("created_at") else ""
+                label = f"{m['grade']}-{m['class_num']}반 {m['student_num']}번 | {m['title']} ({date_str})"
+                with st.expander(label):
+                    with st.form(f"edit_msg_{m['id']}"):
+                        edit_title = st.text_input("제목", value=m["title"], key=f"mt_{m['id']}")
+                        edit_message = st.text_area("메시지", value=m.get("message", ""), key=f"mm_{m['id']}")
+                        edit_code = st.text_area("코드", value=m.get("code", ""), key=f"mc_{m['id']}")
+                        col_save, col_del = st.columns(2)
+                        with col_save:
+                            save = st.form_submit_button("💾 수정 저장", use_container_width=True)
+                        with col_del:
+                            delete = st.form_submit_button("🗑️ 삭제", use_container_width=True)
+                    if save:
+                        supabase.table("personal_messages").update({
+                            "title": edit_title,
+                            "message": edit_message,
+                            "code": edit_code
+                        }).eq("id", m["id"]).execute()
+                        st.success("수정 완료!")
+                        st.rerun()
+                    if delete:
+                        supabase.table("personal_messages").delete().eq("id", m["id"]).execute()
+                        st.rerun()
+
+    # ══════════════════════════════════════
+    # ── 학생 관리 (비번 초기화 + 정보 수정) ──
+    # ══════════════════════════════════════
     with tab3:
         students = (supabase.table("students")
                     .select("*")
@@ -482,19 +621,49 @@ def page_admin_dashboard():
 
             # 학생 목록
             for s in students.data:
-                col_a, col_b, col_c = st.columns([5, 1, 1])
-                with col_a:
-                    st.text(f"{s['grade']}-{s['class_num']}반 {s['student_num']}번 {s['name']} (학번: {s['user_id']})")
-                with col_b:
-                    if st.button("🔑초기화", key=f"reset_pw_{s['id']}"):
-                        # 비밀번호를 학번으로 초기화
+                pw_status = " 🔴초기화됨" if s.get("pw_reset") else ""
+                label = f"{s['grade']}-{s['class_num']}반 {s['student_num']}번 {s['name']} (학번: {s['user_id']}){pw_status}"
+                with st.expander(label):
+                    # 정보 수정 폼
+                    with st.form(f"edit_student_{s['id']}"):
+                        edit_name = st.text_input("이름", value=s["name"], key=f"sn_{s['id']}")
+                        col_g, col_c, col_n = st.columns(3)
+                        with col_g:
+                            edit_grade = st.number_input("학년", min_value=1, max_value=3, value=s["grade"], key=f"sg_{s['id']}")
+                        with col_c:
+                            edit_class = st.number_input("반", min_value=1, max_value=20, value=s["class_num"], key=f"sc_{s['id']}")
+                        with col_n:
+                            edit_num = st.number_input("번호", min_value=1, max_value=50, value=s["student_num"], key=f"snum_{s['id']}")
+
+                        col_a, col_b, col_c = st.columns(3)
+                        with col_a:
+                            save_info = st.form_submit_button("💾 정보 수정", use_container_width=True)
+                        with col_b:
+                            reset_pw = st.form_submit_button("🔑 비번 초기화", use_container_width=True)
+                        with col_c:
+                            delete_student = st.form_submit_button("🗑️ 삭제", use_container_width=True)
+
+                    if save_info:
+                        new_user_id = f"{edit_grade}{edit_class:02d}{edit_num:02d}"
                         supabase.table("students").update({
-                            "password_hash": hash_pw(s["user_id"])
+                            "name": edit_name,
+                            "grade": edit_grade,
+                            "class_num": edit_class,
+                            "student_num": edit_num,
+                            "user_id": new_user_id
                         }).eq("id", s["id"]).execute()
-                        st.success(f"{s['name']} 비밀번호 → 학번({s['user_id']})으로 초기화!")
+                        st.success(f"✅ {edit_name} 정보 수정 완료! (새 학번: {new_user_id})")
                         st.rerun()
-                with col_c:
-                    if st.button("삭제", key=f"del_student_{s['id']}"):
+
+                    if reset_pw:
+                        supabase.table("students").update({
+                            "password_hash": hash_pw(s["user_id"]),
+                            "pw_reset": True
+                        }).eq("id", s["id"]).execute()
+                        st.success(f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다! 학생이 로그인하면 새 비밀번호를 설정하게 됩니다.")
+                        st.rerun()
+
+                    if delete_student:
                         (supabase.table("personal_messages")
                          .delete()
                          .eq("grade", s["grade"])
@@ -502,6 +671,7 @@ def page_admin_dashboard():
                          .eq("student_num", s["student_num"])
                          .execute())
                         supabase.table("students").delete().eq("id", s["id"]).execute()
+                        st.success(f"🗑️ {s['name']} 삭제 완료")
                         st.rerun()
         else:
             st.info("아직 가입한 학생이 없습니다.")
@@ -514,6 +684,9 @@ def main():
     if st.session_state.logged_in:
         if st.session_state.role == "admin":
             page_admin_dashboard()
+        elif st.session_state.role == "student" and st.session_state.user.get("pw_reset"):
+            # 비밀번호 초기화 상태면 재설정 페이지로
+            page_reset_password()
         else:
             page_student_dashboard()
     else:
