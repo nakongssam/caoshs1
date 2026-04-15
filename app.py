@@ -196,6 +196,29 @@ html, body, [class*="css"] {
     border: 1px solid #FFE0B2;
 }
 
+/* ─── 전체 컨테이너/블록 흰색 배경 ─── */
+.stExpander, [data-testid="stExpander"] {
+    background: #FFFFFF !important;
+    border-radius: 12px !important;
+    border: 1px solid #F0E0D0 !important;
+}
+.stTabs [data-baseweb="tab-panel"] {
+    background: #FFFFFF;
+    border-radius: 0 0 12px 12px;
+    padding: 1rem;
+}
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #F0E0D0;
+}
+
+/* info/warning/success 박스 */
+.stAlert {
+    background: #FFFFFF !important;
+    border-radius: 10px !important;
+}
+
 /* ─── 탭 커스텀 ─── */
 .stTabs [data-baseweb="tab-list"] {
     gap: 8px;
@@ -677,16 +700,29 @@ def page_admin_dashboard():
         # 보낸 메시지 목록 (그룹별 관리)
         st.markdown("---")
         st.subheader("📋 보낸 메시지 관리")
-        all_msgs = (supabase.table("personal_messages")
-                    .select("*")
-                    .order("created_at", desc=True)
-                    .limit(500)
-                    .execute())
-        if all_msgs.data:
+        
+        # 전체 메시지 가져오기 (페이징)
+        all_data = []
+        page_size = 1000
+        offset = 0
+        while True:
+            batch = (supabase.table("personal_messages")
+                     .select("*")
+                     .order("created_at", desc=True)
+                     .range(offset, offset + page_size - 1)
+                     .execute())
+            if not batch.data:
+                break
+            all_data.extend(batch.data)
+            if len(batch.data) < page_size:
+                break
+            offset += page_size
+
+        if all_data:
             # 같은 제목 + 같은 시간(분 단위)으로 그룹핑
             from collections import OrderedDict
             groups = OrderedDict()
-            for m in all_msgs.data:
+            for m in all_data:
                 # 분 단위까지 잘라서 같은 시점에 보낸 것끼리 묶기
                 time_key = m["created_at"][:16] if m.get("created_at") else ""
                 group_key = f"{m['title']}||{time_key}"
