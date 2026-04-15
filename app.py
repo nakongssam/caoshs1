@@ -400,22 +400,21 @@ def page_student_dashboard():
     class_num = user["class_num"]
 
     # 헤더
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown(f'<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
-    with col2:
-        if st.button("로그아웃"):
-            st.session_state.logged_in = False
-            st.session_state.user = None
-            st.session_state.role = None
-            st.rerun()
-
+    st.markdown(f'<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
     st.markdown(f"""
     <div class="welcome-banner">
         <h3>👋 {user["name"]}님, 반가워요!</h3>
         <p>{grade}학년 {class_num}반 {user["student_num"]}번</p>
     </div>
     """, unsafe_allow_html=True)
+
+    col_tabs, col_logout = st.columns([5, 1])
+    with col_logout:
+        if st.button("로그아웃", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.user = None
+            st.session_state.role = None
+            st.rerun()
 
     tab1, tab2, tab3 = st.tabs(["📢 전체 공지", "🔐 내 개인 코드", "⚙️ 내 정보"])
 
@@ -513,11 +512,12 @@ def page_student_dashboard():
 #  관리자 대시보드
 # ═══════════════════════════════════════
 def page_admin_dashboard():
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown('<div class="main-title">⚙️ 관리자 페이지</div>', unsafe_allow_html=True)
-    with col2:
-        if st.button("로그아웃"):
+    st.markdown('<div class="main-title">⚙️ 관리자 페이지</div>', unsafe_allow_html=True)
+
+    # 탭 + 로그아웃을 같은 줄에
+    col_tabs, col_logout = st.columns([5, 1])
+    with col_logout:
+        if st.button("로그아웃", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user = None
             st.session_state.role = None
