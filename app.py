@@ -233,7 +233,7 @@ def page_login():
     st.markdown('<div class="sub-title">학번과 비밀번호를 입력해주세요</div>', unsafe_allow_html=True)
 
     with st.form("login_form"):
-        user_id = st.text_input("학번 (예: 1학년 1반 1번 = 10101)")
+        user_id = st.text_input("학번 (예: 10101 = 1학년1반1번)")
         password = st.text_input("비밀번호", type="password")
         submitted = st.form_submit_button("로그인", use_container_width=True)
 
@@ -552,38 +552,66 @@ def page_admin_dashboard():
             except Exception as e:
                 st.error(f"CSV 처리 중 오류: {e}")
 
-        # 보낸 메시지 목록 (수정/삭제 가능)
+        # 보낸 메시지 목록 (그룹별 관리)
         st.markdown("---")
         st.subheader("📋 보낸 메시지 관리")
         all_msgs = (supabase.table("personal_messages")
                     .select("*")
                     .order("created_at", desc=True)
-                    .limit(50)
+                    .limit(200)
                     .execute())
         if all_msgs.data:
+            # 같은 제목 + 같은 날짜로 그룹핑
+            from collections import OrderedDict
+            groups = OrderedDict()
             for m in all_msgs.data:
                 date_str = m["created_at"][:10] if m.get("created_at") else ""
-                label = f"{m['grade']}-{m['class_num']}반 {m['student_num']}번 | {m['title']} ({date_str})"
+                group_key = f"{m['title']}||{date_str}"
+                if group_key not in groups:
+                    groups[group_key] = []
+                groups[group_key].append(m)
+
+            for group_key, msgs in groups.items():
+                title_part, date_part = group_key.split("||")
+                label = f"📦 {title_part} ({date_part}) — {len(msgs)}명"
                 with st.expander(label):
-                    with st.form(f"edit_msg_{m['id']}"):
-                        edit_title = st.text_input("제목", value=m["title"], key=f"mt_{m['id']}")
-                        edit_message = st.text_area("메시지", value=m.get("message", ""), key=f"mm_{m['id']}")
-                        edit_code = st.text_area("코드", value=m.get("code", ""), key=f"mc_{m['id']}")
+                    # 대상 목록 보기
+                    targets = ", ".join(
+                        f"{m['grade']}-{m['class_num']}반 {m['student_num']}번"
+                        for m in sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
+                    )
+                    st.caption(f"📌 대상: {targets}")
+
+                    # 개별 코드 미리보기
+                    with st.expander("👀 개인별 코드 확인", expanded=False):
+                        for m in sorted(msgs, key=lambda x: (x['grade'], x['class_num'], x['student_num'])):
+                            code_preview = m.get('code', '-') or '-'
+                            st.text(f"{m['grade']}-{m['class_num']}반 {m['student_num']}번: {code_preview}")
+
+                    # 일괄 수정 폼
+                    first_msg = msgs[0]
+                    group_id = first_msg['id'][:8]
+                    with st.form(f"edit_group_{group_id}"):
+                        edit_title = st.text_input("제목 (일괄 수정)", value=title_part, key=f"gt_{group_id}")
+                        edit_message = st.text_area("공통 메시지 (일괄 수정)", value=first_msg.get("message", ""), key=f"gm_{group_id}")
                         col_save, col_del = st.columns(2)
                         with col_save:
-                            save = st.form_submit_button("💾 수정 저장", use_container_width=True)
+                            save = st.form_submit_button("💾 전체 수정", use_container_width=True)
                         with col_del:
-                            delete = st.form_submit_button("🗑️ 삭제", use_container_width=True)
+                            delete = st.form_submit_button("🗑️ 전체 삭제", use_container_width=True)
+
                     if save:
-                        supabase.table("personal_messages").update({
-                            "title": edit_title,
-                            "message": edit_message,
-                            "code": edit_code
-                        }).eq("id", m["id"]).execute()
-                        st.success("수정 완료!")
+                        for m in msgs:
+                            supabase.table("personal_messages").update({
+                                "title": edit_title,
+                                "message": edit_message
+                            }).eq("id", m["id"]).execute()
+                        st.success(f"✅ {len(msgs)}건 일괄 수정 완료!")
                         st.rerun()
                     if delete:
-                        supabase.table("personal_messages").delete().eq("id", m["id"]).execute()
+                        for m in msgs:
+                            supabase.table("personal_messages").delete().eq("id", m["id"]).execute()
+                        st.success(f"🗑️ {len(msgs)}건 일괄 삭제 완료!")
                         st.rerun()
 
     # ══════════════════════════════════════
