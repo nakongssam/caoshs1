@@ -378,8 +378,8 @@ def page_student_dashboard():
     st.markdown(f'<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
     st.markdown(f"""
     <div class="welcome-banner">
-        <h3>👋 {user["name"]}님, 반가워요!</h3>
         <p>{grade}학년 {class_num}반 {user["student_num"]}번</p>
+        <h3>👋 {user["name"]}님, 반가워요!</h3>
     </div>
     """, unsafe_allow_html=True)
 
