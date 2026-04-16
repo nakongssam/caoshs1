@@ -37,6 +37,17 @@ html, body, [class*="css"] {
     background: #FAFAFA;
 }
 
+/* ─── 다크모드: 배경도 어둡게 ─── */
+@media (prefers-color-scheme: dark) {
+    .stApp { background: #1E1E1E !important; }
+    .stForm { background: #2D2D2D !important; border-color: #444 !important; }
+    .stExpander, [data-testid="stExpander"] { background: #2D2D2D !important; border-color: #444 !important; }
+    .stTabs [data-baseweb="tab-panel"] { background: #2D2D2D !important; }
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] { background: #2D2D2D !important; border-color: #444 !important; }
+    .stAlert { background: #2D2D2D !important; }
+    .code-card-code { background: #2D2D2D !important; border-color: #444 !important; border-left-color: #4CAF50 !important; }
+}
+
 /* ─── 메인 타이틀 ─── */
 .main-title {
     font-family: 'Gaegu', cursive;
@@ -1072,7 +1083,7 @@ def page_admin_dashboard():
                                 "password_hash": hash_pw(s["user_id"]),
                                 "pw_reset": True
                             }).eq("id", s["id"]).execute()
-                            st.success(f"🔑 {s['name']} 비밀번호 → 학번({s['user_id']})으로 초기화!")
+                            st.success(f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다. 학생에게 학번으로 로그인 후 비밀번호를 다시 설정하라고 안내해주세요.")
                             st.rerun()
 
                         if delete_student:
