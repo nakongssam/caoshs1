@@ -555,10 +555,11 @@ def page_student_dashboard():
                 """
                 if m.get("message"):
                     content_html += f"<p>{m['message']}</p>"
-                content_html += f'<div class="notice-date" style="color:#999; margin-top:0.5rem;">{date_str}</div></div>'
+                content_html += "</div>"
                 st.markdown(content_html, unsafe_allow_html=True)
                 if m.get("code"):
                     st.code(m["code"], language=None)
+                st.caption(date_str)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
