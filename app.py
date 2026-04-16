@@ -1288,7 +1288,7 @@ def page_admin_dashboard():
                 # 상단 통계
                 stats_parts = [f"{emoji} {cnt}" for emoji, cnt in class_counter.most_common()]
                 if no_response > 0:
-                    stats_parts.append(f"❓ 무응답 {no_response}")
+                    stats_parts.append(f"무응답 {no_response}")
                 st.markdown(f"### {'  '.join(stats_parts)}")
                 st.caption(f"총 {len(class_students)}명 | 응답 {responded}명 | 무응답 {no_response}명")
                 
@@ -1299,7 +1299,7 @@ def page_admin_dashboard():
                     if s['student_num'] in class_moods:
                         mood_emoji = class_moods[s['student_num']]['mood']
                     else:
-                        mood_emoji = "❓"
+                        mood_emoji = "⚪"
                     st.markdown(f"{mood_emoji}  {s['student_num']}번 {s['name']}")
 
 
