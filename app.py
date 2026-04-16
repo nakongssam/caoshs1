@@ -206,17 +206,74 @@ html, body, [class*="css"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ─── 세션 초기화 ───
+# ─── 세션 토큰으로 로그인 유지 ───
+import secrets as _secrets
+
+def _generate_token():
+    return _secrets.token_hex(16)
+
+def _save_token(user_id, token):
+    """Supabase에 토큰 저장"""
+    # 기존 토큰 삭제 후 새로 저장
+    supabase.table("sessions").upsert({
+        "user_id": user_id,
+        "token": token
+    }, on_conflict="user_id").execute()
+
+def _get_user_by_token(token):
+    """토큰으로 유저 조회"""
+    result = supabase.table("sessions").select("user_id").eq("token", token).execute()
+    if not result.data:
+        return None, None
+    stored_user_id = result.data[0]["user_id"]
+    
+    # 관리자 체크
+    if stored_user_id == "admin":
+        return {"name": "선생님", "user_id": "admin"}, "admin"
+    
+    # 학생 조회
+    student = supabase.table("students").select("*").eq("user_id", stored_user_id).execute()
+    if student.data:
+        return student.data[0], "student"
+    return None, None
+
+def _delete_token(user_id):
+    """로그아웃 시 토큰 삭제"""
+    supabase.table("sessions").delete().eq("user_id", user_id).execute()
+
+# ─── 세션 초기화 (토큰 기반 자동 로그인) ───
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user = None
     st.session_state.role = None
+
+    # URL에 토큰이 있으면 자동 로그인 시도
+    params = st.query_params
+    token = params.get("token")
+    if token:
+        user, role = _get_user_by_token(token)
+        if user:
+            st.session_state.logged_in = True
+            st.session_state.user = user
+            st.session_state.role = role
+            st.session_state.token = token
 
 # ─── 관리자 비밀번호 (secrets에서 가져옴) ───
 ADMIN_ID = "admin"
 
 def get_admin_pw_hash():
     return hash_pw(st.secrets.get("ADMIN_PASSWORD", "teacher1234"))
+
+def do_logout():
+    """로그아웃 처리"""
+    if st.session_state.user:
+        _delete_token(st.session_state.user.get("user_id", ""))
+    st.session_state.logged_in = False
+    st.session_state.user = None
+    st.session_state.role = None
+    st.session_state.token = None
+    st.query_params.clear()
+    st.rerun()
 
 
 # ═══════════════════════════════════════
@@ -335,9 +392,13 @@ def page_login():
 
         # 관리자 로그인
         if user_id == ADMIN_ID and hash_pw(password) == get_admin_pw_hash():
+            token = _generate_token()
+            _save_token("admin", token)
             st.session_state.logged_in = True
             st.session_state.user = {"name": "선생님", "user_id": "admin"}
             st.session_state.role = "admin"
+            st.session_state.token = token
+            st.query_params["token"] = token
             st.rerun()
             return
 
@@ -348,9 +409,13 @@ def page_login():
                   .eq("password_hash", hash_pw(password))
                   .execute())
         if result.data:
+            token = _generate_token()
+            _save_token(user_id, token)
             st.session_state.logged_in = True
             st.session_state.user = result.data[0]
             st.session_state.role = "student"
+            st.session_state.token = token
+            st.query_params["token"] = token
             st.rerun()
         else:
             st.error("학번 또는 비밀번호가 올바르지 않습니다.")
@@ -385,11 +450,8 @@ def page_student_dashboard():
 
     col_tabs, col_logout = st.columns([5, 1])
     with col_logout:
-        if st.button("로그아웃", use_container_width=True):
-            st.session_state.logged_in = False
-            st.session_state.user = None
-            st.session_state.role = None
-            st.rerun()
+        if st.button("로그아웃", use_container_width=True, key="logout_student"):
+            do_logout()
 
     tab1, tab2, tab3 = st.tabs(["🔐 내 개인 코드", "📢 전체 공지", "⚙️ 내 정보"])
 
@@ -492,11 +554,8 @@ def page_admin_dashboard():
     # 탭 + 로그아웃을 같은 줄에
     col_tabs, col_logout = st.columns([5, 1])
     with col_logout:
-        if st.button("로그아웃", use_container_width=True):
-            st.session_state.logged_in = False
-            st.session_state.user = None
-            st.session_state.role = None
-            st.rerun()
+        if st.button("로그아웃", use_container_width=True, key="logout_admin"):
+            do_logout()
 
     tab1, tab2, tab3 = st.tabs(["📢 공지 관리", "💌 개인 메시지", "👥 학생 관리"])
 
@@ -599,7 +658,7 @@ def page_admin_dashboard():
             """)
 
         with st.form("csv_bulk_form"):
-            csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 개인 인증코드")
+            csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 4월 개인 인증코드")
             csv_message = st.text_area("공통 메시지 (선택)", key="csv_msg", placeholder="예: 아래 코드를 사용하세요.")
             csv_file = st.file_uploader("CSV 파일 업로드", type=["csv"], key="csv_upload")
             csv_submit = st.form_submit_button("CSV로 일괄 전송", use_container_width=True)
