@@ -245,6 +245,22 @@ html, body, [class*="css"] {
     .msg-code-label { color: #AAAAAA !important; }
     .msg-body { color: #DDDDDD !important; }
     .msg-date { color: #888888 !important; }
+    
+    /* Expander 다크모드 - 흰 배경에 어두운 글씨 문제 해결 */
+    [data-testid="stExpander"] {
+        background: #2D2D2D !important;
+        border-color: #444 !important;
+    }
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] details,
+    [data-testid="stExpander"] p,
+    [data-testid="stExpander"] span,
+    [data-testid="stExpander"] div {
+        color: #F0F0F0 !important;
+    }
+    [data-testid="stExpander"] summary p {
+        color: #F0F0F0 !important;
+    }
 }
 
 /* ─── 코드 카드 내 코드 영역 ─── */
