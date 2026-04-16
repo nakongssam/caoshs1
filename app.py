@@ -214,6 +214,39 @@ html, body, [class*="css"] {
     border-radius: 0 10px 10px 0 !important;
 }
 
+/* ─── 메시지 내용 스타일 ─── */
+.msg-title {
+    margin: 0 0 0.4rem !important;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+}
+.msg-code-label {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+.msg-body {
+    margin: 0.5rem 0;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+.msg-date {
+    color: #999;
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+}
+
+/* 다크모드 대응 */
+@media (prefers-color-scheme: dark) {
+    .msg-title { color: #F0F0F0 !important; }
+    .msg-code-label { color: #AAAAAA !important; }
+    .msg-body { color: #DDDDDD !important; }
+    .msg-date { color: #888888 !important; }
+}
+
 /* ─── 코드 카드 내 코드 영역 ─── */
 .code-card-code {
     border-left: 4px solid #4CAF50;
@@ -633,14 +666,14 @@ def page_student_dashboard():
                 date_str = m["created_at"][:10] if m.get("created_at") else ""
                 st.markdown('<div class="msg-wrap"></div>', unsafe_allow_html=True)
                 with st.container(border=True):
-                    st.markdown(f'<h4 style="margin:0 0 0.4rem; color:#333; font-size:1rem; font-weight:600;">💌 {m["title"]}</h4>', unsafe_allow_html=True)
+                    st.markdown(f'<h4 class="msg-title">💌 {m["title"]}</h4>', unsafe_allow_html=True)
                     if m.get("code"):
-                        st.markdown('<div style="font-size:0.8rem; color:#666; font-weight:600; margin-top:0.5rem;">📌 개인 코드 (복사 가능)</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="msg-code-label">📌 개인 코드 (복사 가능)</div>', unsafe_allow_html=True)
                         st.code(m["code"], language=None)
                     if m.get("message"):
                         msg_text = str(m["message"]).replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-                        st.markdown(f'<div style="margin:0.5rem 0; color:#555; font-size:0.9rem; line-height:1.6;">{msg_text}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div style="color:#999; font-size:0.75rem; margin-top:0.3rem;">{date_str}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="msg-body">{msg_text}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="msg-date">{date_str}</div>', unsafe_allow_html=True)
                 st.markdown('<div style="margin-bottom:1rem;"></div>', unsafe_allow_html=True)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
