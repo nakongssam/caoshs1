@@ -567,11 +567,13 @@ def page_student_dashboard():
         if notices.data:
             for n in notices.data:
                 date_str = n["created_at"][:10] if n.get("created_at") else ""
+                author = n.get("author", "")
+                author_tag = f" | {author}" if author else ""
                 st.markdown(f"""
                 <div class="notice-card">
                     <h4>📌 {n['title']}</h4>
                     <p>{n['content']}</p>
-                    <div class="notice-date">{date_str}</div>
+                    <div class="notice-date">{date_str}{author_tag}</div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -649,9 +651,11 @@ def page_admin_dashboard():
             content = st.text_area("공지 내용")
             submitted = st.form_submit_button("공지 등록", use_container_width=True)
         if submitted and title:
+            author = st.session_state.user.get("name", "관리자")
             supabase.table("notices").insert({
                 "title": title,
                 "content": content,
+                "author": author,
                 "created_at": datetime.now().isoformat()
             }).execute()
             st.success("공지가 등록되었습니다!")
@@ -667,7 +671,9 @@ def page_admin_dashboard():
         if notices.data:
             for n in notices.data:
                 date_str = n["created_at"][:10] if n.get("created_at") else ""
-                with st.expander(f"📌 {n['title']} ({date_str})"):
+                author = n.get("author", "")
+                author_tag = f" - {author}" if author else ""
+                with st.expander(f"📌 {n['title']} ({date_str}{author_tag})"):
                     with st.form(f"edit_notice_{n['id']}"):
                         edit_title = st.text_input("제목", value=n["title"], key=f"nt_{n['id']}")
                         edit_content = st.text_area("내용", value=n.get("content", ""), key=f"nc_{n['id']}")
