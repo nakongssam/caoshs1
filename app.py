@@ -555,11 +555,14 @@ def page_student_dashboard():
                 """
                 if m.get("message"):
                     content_html += f"<p>{m['message']}</p>"
-                content_html += "</div>"
-                st.markdown(content_html, unsafe_allow_html=True)
                 if m.get("code"):
-                    st.code(m["code"], language=None)
-                st.caption(date_str)
+                    content_html += f'<div class="code-block">{m["code"]}</div>'
+                content_html += f'<div class="notice-date" style="color:#999; margin-top:0.5rem;">{date_str}</div></div>'
+                st.markdown(content_html, unsafe_allow_html=True)
+                # 복사 가능한 숨겨진 st.code (복사 버튼용)
+                if m.get("code"):
+                    with st.expander("📋 코드 복사하기", expanded=False):
+                        st.code(m["code"], language=None)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
