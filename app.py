@@ -383,7 +383,7 @@ def page_reset_password():
 # ═══════════════════════════════════════
 def page_teacher_register():
     st.markdown('<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">👩‍🏫 선생님 가입</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">선생님 가입</div>', unsafe_allow_html=True)
 
     with st.form("teacher_register_form"):
         invite_code = st.text_input("초대 코드")
@@ -502,7 +502,7 @@ def page_login():
             st.session_state.page = "register"
             st.rerun()
     with col2:
-        if st.button("👩‍🏫 선생님 가입", use_container_width=True):
+        if st.button("선생님 가입", use_container_width=True):
             st.session_state.page = "teacher_register"
             st.rerun()
 
