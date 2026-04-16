@@ -665,7 +665,7 @@ def page_student_dashboard():
         if st.button("로그아웃", use_container_width=True, key="logout_student"):
             do_logout()
 
-    tab1, tab2, tab3 = st.tabs(["🔐 내 개인 코드", "📢 전체 공지", "⚙️ 내 정보"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🔐 내 개인 코드", "📢 전체 공지", "😊 오늘의 기분", "⚙️ 내 정보"])
 
     # ── 개인 코드/메시지 ──
     with tab1:
@@ -716,8 +716,68 @@ def page_student_dashboard():
         else:
             st.info("아직 공지가 없습니다.")
 
-    # ── 내 정보 수정 (4번 기능) ──
+    # ── 오늘의 기분 ──
     with tab3:
+        from datetime import date
+        today = date.today().isoformat()
+        
+        st.subheader("😊 오늘의 기분")
+        st.caption("오늘 기분을 선택하세요. 하루 중 여러 번 변경할 수 있어요.")
+
+        mood_options = [
+            ("😄", "아주좋음"),
+            ("😊", "좋음"),
+            ("😐", "보통"),
+            ("😕", "별로"),
+            ("😢", "슬픔"),
+            ("😡", "화남"),
+            ("😴", "피곤"),
+            ("🤒", "아픔"),
+        ]
+
+        # 오늘 기분 조회
+        today_mood = (supabase.table("moods")
+                      .select("*")
+                      .eq("grade", grade)
+                      .eq("class_num", class_num)
+                      .eq("student_num", user["student_num"])
+                      .eq("mood_date", today)
+                      .execute())
+        current_mood = today_mood.data[0]["mood"] if today_mood.data else None
+
+        if current_mood:
+            st.info(f"오늘 기분: {current_mood}")
+
+        cols = st.columns(4)
+        for i, (emoji, label) in enumerate(mood_options):
+            with cols[i % 4]:
+                if st.button(f"{emoji}\n{label}", key=f"mood_{emoji}", use_container_width=True):
+                    existing = (supabase.table("moods")
+                                .select("id")
+                                .eq("grade", grade)
+                                .eq("class_num", class_num)
+                                .eq("student_num", user["student_num"])
+                                .eq("mood_date", today)
+                                .execute())
+                    if existing.data:
+                        supabase.table("moods").update({
+                            "mood": emoji,
+                            "student_name": user["name"],
+                            "created_at": datetime.now().isoformat()
+                        }).eq("id", existing.data[0]["id"]).execute()
+                    else:
+                        supabase.table("moods").insert({
+                            "grade": grade,
+                            "class_num": class_num,
+                            "student_num": user["student_num"],
+                            "student_name": user["name"],
+                            "mood": emoji,
+                            "mood_date": today
+                        }).execute()
+                    st.rerun()
+
+    # ── 내 정보 수정 ──
+    with tab4:
         st.subheader("내 정보 수정")
         with st.form("edit_my_info"):
             new_name = st.text_input("이름", value=user["name"])
@@ -778,7 +838,7 @@ def page_admin_dashboard():
 
     # 세션 메시지 표시 제거 (탭 안에서 표시)
 
-    tab1, tab2, tab3 = st.tabs(["📢 공지 관리", "💌 개인 메시지", "👥 학생 관리"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📢 공지 관리", "💌 개인 메시지", "👥 학생 관리", "😊 기분 현황"])
 
     # ══════════════════════════
     # ── 공지 관리 (수정 가능) ──
@@ -1150,6 +1210,66 @@ def page_admin_dashboard():
                     st.markdown("---")
         else:
             st.info("아직 가입한 학생이 없습니다.")
+
+    # ══════════════════════════════════════
+    # ── 기분 현황 ──
+    # ══════════════════════════════════════
+    with tab4:
+        from datetime import date
+        today = date.today().isoformat()
+
+        st.subheader("😊 오늘의 기분 현황")
+
+        # 날짜 선택
+        selected_date = st.date_input("날짜 선택", value=date.today())
+        date_str = selected_date.isoformat()
+
+        moods = (supabase.table("moods")
+                 .select("*")
+                 .eq("mood_date", date_str)
+                 .order("grade")
+                 .order("class_num")
+                 .order("student_num")
+                 .execute())
+
+        if not moods.data:
+            st.info(f"{date_str}에 기분을 남긴 학생이 없습니다.")
+        else:
+            # 전체 통계
+            from collections import Counter
+            mood_counter = Counter(m["mood"] for m in moods.data)
+            st.markdown(f"**총 {len(moods.data)}명 참여**")
+            stats_text = "  ".join(f"{emoji} {cnt}" for emoji, cnt in mood_counter.most_common())
+            st.markdown(f"### {stats_text}")
+
+            st.markdown("---")
+
+            # 반별로 그룹핑
+            from itertools import groupby
+            sorted_moods = sorted(moods.data, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
+            
+            # 반 필터
+            class_set = sorted(set((m['grade'], m['class_num']) for m in moods.data))
+            class_options = ["전체"] + [f"{g}-{c}반" for g, c in class_set]
+            filter_class = st.selectbox("학급 필터", class_options, key="mood_class_filter")
+
+            if filter_class != "전체":
+                g = int(filter_class.split("-")[0])
+                c = int(filter_class.split("-")[1].replace("반", ""))
+                sorted_moods = [m for m in sorted_moods if m['grade'] == g and m['class_num'] == c]
+
+            for cls_key, cls_moods in groupby(sorted_moods, key=lambda x: f"{x['grade']}-{x['class_num']}반"):
+                cls_list = list(cls_moods)
+                class_counter = Counter(m["mood"] for m in cls_list)
+                class_stats = "  ".join(f"{emoji}{cnt}" for emoji, cnt in class_counter.most_common())
+                
+                with st.expander(f"**{cls_key}** ({len(cls_list)}명) — {class_stats}"):
+                    # 기분별로 정렬
+                    emoji_order = ["😄", "😊", "😐", "😕", "😢", "😡", "😴", "🤒"]
+                    sorted_by_mood = sorted(cls_list, key=lambda x: (emoji_order.index(x['mood']) if x['mood'] in emoji_order else 99, x['student_num']))
+                    for m in sorted_by_mood:
+                        name = m.get("student_name") or ""
+                        st.markdown(f"{m['mood']}  {m['student_num']}번 {name}")
 
 
 # ═══════════════════════════════════════
