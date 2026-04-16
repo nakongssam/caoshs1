@@ -727,10 +727,7 @@ def page_admin_dashboard():
         if st.button("로그아웃", use_container_width=True, key="logout_admin"):
             do_logout()
 
-    # 세션 메시지 표시 (비번 초기화 등)
-    if st.session_state.get("admin_msg"):
-        st.success(st.session_state["admin_msg"])
-        del st.session_state["admin_msg"]
+    # 세션 메시지 표시 제거 (탭 안에서 표시)
 
     tab1, tab2, tab3 = st.tabs(["📢 공지 관리", "💌 개인 메시지", "👥 학생 관리"])
 
@@ -993,6 +990,11 @@ def page_admin_dashboard():
 
         # 통계
         if students.data:
+            # 세션 메시지 표시 (비번 초기화 등)
+            if st.session_state.get("admin_msg"):
+                st.success(st.session_state["admin_msg"])
+                del st.session_state["admin_msg"]
+
             total = len(students.data)
             class_set = set((s['grade'], s['class_num']) for s in students.data)
             class_sorted = sorted(class_set, key=lambda x: (x[0], x[1]))
