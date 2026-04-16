@@ -1244,32 +1244,63 @@ def page_admin_dashboard():
 
             st.markdown("---")
 
-            # 반별로 그룹핑
-            from itertools import groupby
-            sorted_moods = sorted(moods.data, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
-            
             # 반 필터
-            class_set = sorted(set((m['grade'], m['class_num']) for m in moods.data))
+            # 전체 학생 데이터 가져오기 (무응답 학생 파악용)
+            all_students = supabase.table("students").select("*").execute().data or []
+            
+            # 학급 옵션 (학생 데이터 기준)
+            class_set = sorted(set((s['grade'], s['class_num']) for s in all_students))
             class_options = ["전체"] + [f"{g}-{c}반" for g, c in class_set]
             filter_class = st.selectbox("학급 필터", class_options, key="mood_class_filter")
 
-            if filter_class != "전체":
+            if filter_class == "전체":
+                # 전체 보기: 반별로 펼쳐서 요약만
+                from itertools import groupby
+                sorted_moods = sorted(moods.data, key=lambda x: (x['grade'], x['class_num'], x['student_num']))
+                for cls_key, cls_moods_g in groupby(sorted_moods, key=lambda x: f"{x['grade']}-{x['class_num']}반"):
+                    cls_list = list(cls_moods_g)
+                    class_counter = Counter(m["mood"] for m in cls_list)
+                    class_stats = "  ".join(f"{emoji}{cnt}" for emoji, cnt in class_counter.most_common())
+                    st.markdown(f"**{cls_key}** ({len(cls_list)}명 응답) — {class_stats}")
+                st.caption("자세히 보려면 위에서 학급을 선택하세요.")
+            else:
+                # 특정 학급 선택: 전체 명단 + 각자 이모지
                 g = int(filter_class.split("-")[0])
                 c = int(filter_class.split("-")[1].replace("반", ""))
-                sorted_moods = [m for m in sorted_moods if m['grade'] == g and m['class_num'] == c]
-
-            for cls_key, cls_moods in groupby(sorted_moods, key=lambda x: f"{x['grade']}-{x['class_num']}반"):
-                cls_list = list(cls_moods)
-                class_counter = Counter(m["mood"] for m in cls_list)
-                class_stats = "  ".join(f"{emoji}{cnt}" for emoji, cnt in class_counter.most_common())
                 
-                with st.expander(f"**{cls_key}** ({len(cls_list)}명) — {class_stats}"):
-                    # 기분별로 정렬
-                    emoji_order = ["😄", "😊", "😐", "😕", "😢", "😡", "😴", "🤒"]
-                    sorted_by_mood = sorted(cls_list, key=lambda x: (emoji_order.index(x['mood']) if x['mood'] in emoji_order else 99, x['student_num']))
-                    for m in sorted_by_mood:
-                        name = m.get("student_name") or ""
-                        st.markdown(f"{m['mood']}  {m['student_num']}번 {name}")
+                # 해당 반 학생 전체
+                class_students = sorted(
+                    [s for s in all_students if s['grade'] == g and s['class_num'] == c],
+                    key=lambda x: x['student_num']
+                )
+                
+                # 해당 반 기분 매핑 (학번 → mood)
+                class_moods = {
+                    (m['student_num']): m for m in moods.data
+                    if m['grade'] == g and m['class_num'] == c
+                }
+                
+                # 통계 계산
+                responded = sum(1 for s in class_students if s['student_num'] in class_moods)
+                no_response = len(class_students) - responded
+                class_counter = Counter(class_moods[s['student_num']]['mood'] for s in class_students if s['student_num'] in class_moods)
+                
+                # 상단 통계
+                stats_parts = [f"{emoji} {cnt}" for emoji, cnt in class_counter.most_common()]
+                if no_response > 0:
+                    stats_parts.append(f"❓ 무응답 {no_response}")
+                st.markdown(f"### {'  '.join(stats_parts)}")
+                st.caption(f"총 {len(class_students)}명 | 응답 {responded}명 | 무응답 {no_response}명")
+                
+                st.markdown("---")
+                
+                # 명단 (번호순)
+                for s in class_students:
+                    if s['student_num'] in class_moods:
+                        mood_emoji = class_moods[s['student_num']]['mood']
+                    else:
+                        mood_emoji = "❓"
+                    st.markdown(f"{mood_emoji}  {s['student_num']}번 {s['name']}")
 
 
 # ═══════════════════════════════════════
