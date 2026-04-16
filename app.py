@@ -198,8 +198,15 @@ html, body, [class*="css"] {
 }
 
 /* ─── 코드 복사 버튼 항상 표시 ─── */
-[data-testid="stCode"] button {
+[data-testid="stCode"] button,
+[data-testid="stCodeBlock"] button,
+.stCode button,
+.stCodeBlock button,
+pre + div button,
+[class*="Code"] button {
     opacity: 1 !important;
+    visibility: visible !important;
+    display: flex !important;
 }
 
 /* ─── 반응형 ─── */
@@ -598,23 +605,16 @@ def page_student_dashboard():
         if messages.data:
             for idx, m in enumerate(messages.data):
                 date_str = m["created_at"][:10] if m.get("created_at") else ""
-                code_html = ""
-                if m.get("code"):
-                    code_html = f"""
-                    <div style="background:#F0F0F0; padding:0.7rem 1rem; border-radius:8px; margin-top:0.5rem; font-family:'Courier New',monospace; font-size:0.88rem; display:flex; justify-content:space-between; align-items:center;">
-                        <span id="code_text_{idx}">{m["code"]}</span>
-                        <button onclick="navigator.clipboard.writeText('{m["code"]}').then(()=>this.innerText='✅ 복사됨').catch(()=>{{}})" style="background:#4CAF50; color:white; border:none; padding:0.3rem 0.7rem; border-radius:6px; cursor:pointer; font-size:0.8rem; white-space:nowrap; margin-left:0.5rem;">📋 복사</button>
-                    </div>
-                    """
                 content_html = f"""
                 <div class="code-card">
                     <h4>💌 {m['title']}</h4>
                 """
                 if m.get("message"):
                     content_html += f"<p>{m['message']}</p>"
-                content_html += code_html
                 content_html += f'<div class="notice-date" style="color:#999; margin-top:0.5rem;">{date_str}</div></div>'
                 st.markdown(content_html, unsafe_allow_html=True)
+                if m.get("code"):
+                    st.code(m["code"], language=None)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
