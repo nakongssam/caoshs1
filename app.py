@@ -197,6 +197,15 @@ html, body, [class*="css"] {
     border-radius: 8px !important;
 }
 
+/* ─── 코드 카드 내 코드 영역 ─── */
+.code-card-code {
+    border-left: 4px solid #4CAF50;
+    border-right: 1px solid #E8E8E8;
+    background: #FFFFFF;
+    padding: 0 1.3rem;
+    margin-top: -1rem;
+}
+
 /* ─── 코드 복사 버튼 항상 표시 ─── */
 [data-testid="stCode"] button,
 [data-testid="stCodeBlock"] button,
@@ -606,15 +615,22 @@ def page_student_dashboard():
             for idx, m in enumerate(messages.data):
                 date_str = m["created_at"][:10] if m.get("created_at") else ""
                 content_html = f"""
-                <div class="code-card">
+                <div class="code-card" style="margin-bottom:0; border-radius:0 10px 0 0; border-bottom:none;">
                     <h4>💌 {m['title']}</h4>
                 """
                 if m.get("message"):
                     content_html += f"<p>{m['message']}</p>"
-                content_html += f'<div class="notice-date" style="color:#999; margin-top:0.5rem;">{date_str}</div></div>'
+                content_html += "</div>"
                 st.markdown(content_html, unsafe_allow_html=True)
                 if m.get("code"):
+                    st.markdown('<div class="code-card-code">', unsafe_allow_html=True)
                     st.code(m["code"], language=None)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="code-card" style="margin-top:0; border-radius:0 0 10px 0; border-top:none; padding-top:0;">
+                    <div class="notice-date" style="color:#999;">{date_str}</div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
