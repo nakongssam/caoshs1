@@ -727,6 +727,11 @@ def page_admin_dashboard():
         if st.button("로그아웃", use_container_width=True, key="logout_admin"):
             do_logout()
 
+    # 세션 메시지 표시 (비번 초기화 등)
+    if st.session_state.get("admin_msg"):
+        st.success(st.session_state["admin_msg"])
+        del st.session_state["admin_msg"]
+
     tab1, tab2, tab3 = st.tabs(["📢 공지 관리", "💌 개인 메시지", "👥 학생 관리"])
 
     # ══════════════════════════
@@ -1083,7 +1088,7 @@ def page_admin_dashboard():
                                 "password_hash": hash_pw(s["user_id"]),
                                 "pw_reset": True
                             }).eq("id", s["id"]).execute()
-                            st.success(f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다. 학생에게 학번으로 로그인 후 비밀번호를 다시 설정하라고 안내해주세요.")
+                            st.session_state["admin_msg"] = f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다. 학생에게 학번으로 로그인 후 비밀번호를 다시 설정하라고 안내해주세요."
                             st.rerun()
 
                         if delete_student:
