@@ -990,11 +990,6 @@ def page_admin_dashboard():
 
         # 통계
         if students.data:
-            # 세션 메시지 표시 (비번 초기화 등)
-            if st.session_state.get("admin_msg"):
-                st.success(st.session_state["admin_msg"])
-                del st.session_state["admin_msg"]
-
             total = len(students.data)
             class_set = set((s['grade'], s['class_num']) for s in students.data)
             class_sorted = sorted(class_set, key=lambda x: (x[0], x[1]))
@@ -1090,8 +1085,7 @@ def page_admin_dashboard():
                                 "password_hash": hash_pw(s["user_id"]),
                                 "pw_reset": True
                             }).eq("id", s["id"]).execute()
-                            st.session_state["admin_msg"] = f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다. 학생에게 학번으로 로그인 후 비밀번호를 다시 설정하라고 안내해주세요."
-                            st.rerun()
+                            st.success(f"🔑 {s['name']} 비밀번호가 학번({s['user_id']})으로 초기화되었습니다. 학생에게 학번으로 로그인 후 비밀번호를 다시 설정하라고 안내해주세요.")
 
                         if delete_student:
                             (supabase.table("personal_messages")
