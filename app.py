@@ -229,7 +229,12 @@ def _get_user_by_token(token):
     
     # 관리자 체크
     if stored_user_id == "admin":
-        return {"name": "선생님", "user_id": "admin"}, "admin"
+        return {"name": "관리자", "user_id": "admin"}, "admin"
+    
+    # 교사 조회
+    teacher = supabase.table("teachers").select("*").eq("user_id", stored_user_id).execute()
+    if teacher.data:
+        return teacher.data[0], "teacher"
     
     # 학생 조회
     student = supabase.table("students").select("*").eq("user_id", stored_user_id).execute()
@@ -374,20 +379,73 @@ def page_reset_password():
 
 
 # ═══════════════════════════════════════
+#  교사 가입
+# ═══════════════════════════════════════
+def page_teacher_register():
+    st.markdown('<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">🍎 선생님 가입</div>', unsafe_allow_html=True)
+
+    with st.form("teacher_register_form"):
+        invite_code = st.text_input("초대 코드")
+        name = st.text_input("이름")
+        user_id = st.text_input("아이디 (영문/숫자)")
+        password = st.text_input("비밀번호", type="password")
+        password_confirm = st.text_input("비밀번호 확인", type="password")
+        submitted = st.form_submit_button("가입하기", use_container_width=True)
+
+    if submitted:
+        # 초대 코드 확인
+        correct_code = st.secrets.get("TEACHER_INVITE_CODE", "osung2026")
+        if invite_code != correct_code:
+            st.error("초대 코드가 올바르지 않습니다.")
+            return
+        if not all([name, user_id, password, password_confirm]):
+            st.error("모든 항목을 입력해주세요.")
+            return
+        if password != password_confirm:
+            st.error("비밀번호가 일치하지 않습니다.")
+            return
+        if len(password) < 4:
+            st.error("비밀번호는 4자 이상으로 설정해주세요.")
+            return
+
+        # 아이디 중복 확인 (교사 테이블)
+        dup = supabase.table("teachers").select("id").eq("user_id", user_id).execute()
+        if dup.data:
+            st.error("이미 사용 중인 아이디입니다.")
+            return
+
+        # 학생 아이디와도 중복 확인
+        dup2 = supabase.table("students").select("id").eq("user_id", user_id).execute()
+        if dup2.data:
+            st.error("이미 사용 중인 아이디입니다.")
+            return
+
+        supabase.table("teachers").insert({
+            "user_id": user_id,
+            "password_hash": hash_pw(password),
+            "name": name,
+            "created_at": datetime.now().isoformat()
+        }).execute()
+
+        st.success(f"🎉 {name} 선생님, 가입 완료! 아이디 **{user_id}** 로 로그인하세요.")
+
+
+# ═══════════════════════════════════════
 #  로그인
 # ═══════════════════════════════════════
 def page_login():
     st.markdown('<div class="main-title">🏫 천안오성고 1학년 알림장</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">학번과 비밀번호를 입력해주세요</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">로그인</div>', unsafe_allow_html=True)
 
     with st.form("login_form"):
-        user_id = st.text_input("학번 (예: 10101 = 1학년1반1번)")
+        user_id = st.text_input("학번(학생) 또는 아이디(교사)")
         password = st.text_input("비밀번호", type="password")
         submitted = st.form_submit_button("로그인", use_container_width=True)
 
     if submitted:
         if not user_id or not password:
-            st.error("학번과 비밀번호를 입력해주세요.")
+            st.error("학번/아이디와 비밀번호를 입력해주세요.")
             return
 
         # 관리자 로그인
@@ -395,8 +453,25 @@ def page_login():
             token = _generate_token()
             _save_token("admin", token)
             st.session_state.logged_in = True
-            st.session_state.user = {"name": "선생님", "user_id": "admin"}
+            st.session_state.user = {"name": "관리자", "user_id": "admin"}
             st.session_state.role = "admin"
+            st.session_state.token = token
+            st.query_params["token"] = token
+            st.rerun()
+            return
+
+        # 교사 로그인
+        teacher_result = (supabase.table("teachers")
+                          .select("*")
+                          .eq("user_id", user_id)
+                          .eq("password_hash", hash_pw(password))
+                          .execute())
+        if teacher_result.data:
+            token = _generate_token()
+            _save_token(user_id, token)
+            st.session_state.logged_in = True
+            st.session_state.user = teacher_result.data[0]
+            st.session_state.role = "teacher"
             st.session_state.token = token
             st.query_params["token"] = token
             st.rerun()
@@ -418,7 +493,7 @@ def page_login():
             st.query_params["token"] = token
             st.rerun()
         else:
-            st.error("학번 또는 비밀번호가 올바르지 않습니다.")
+            st.error("학번/아이디 또는 비밀번호가 올바르지 않습니다.")
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -427,8 +502,9 @@ def page_login():
             st.session_state.page = "register"
             st.rerun()
     with col2:
-        if st.button("🔑 관리자 로그인", use_container_width=True):
-            st.info("위 로그인 폼에서 관리자 아이디/비밀번호를 입력하세요.")
+        if st.button("🍎 선생님 가입", use_container_width=True):
+            st.session_state.page = "teacher_register"
+            st.rerun()
 
 
 # ═══════════════════════════════════════
@@ -549,7 +625,11 @@ def page_student_dashboard():
 #  관리자 대시보드
 # ═══════════════════════════════════════
 def page_admin_dashboard():
-    st.markdown('<div class="main-title">⚙️ 관리자 페이지</div>', unsafe_allow_html=True)
+    if st.session_state.role == "teacher":
+        display_name = st.session_state.user.get("name", "선생님")
+        st.markdown(f'<div class="main-title">⚙️ {display_name} 선생님</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="main-title">⚙️ 관리자 페이지</div>', unsafe_allow_html=True)
 
     # 탭 + 로그아웃을 같은 줄에
     col_tabs, col_logout = st.columns([5, 1])
@@ -908,10 +988,9 @@ def page_admin_dashboard():
 # ═══════════════════════════════════════
 def main():
     if st.session_state.logged_in:
-        if st.session_state.role == "admin":
+        if st.session_state.role in ("admin", "teacher"):
             page_admin_dashboard()
         elif st.session_state.role == "student" and st.session_state.user.get("pw_reset"):
-            # 비밀번호 초기화 상태면 재설정 페이지로
             page_reset_password()
         else:
             page_student_dashboard()
@@ -919,6 +998,12 @@ def main():
         page = st.session_state.get("page", "login")
         if page == "register":
             page_register()
+            st.markdown("---")
+            if st.button("← 로그인으로 돌아가기", use_container_width=True):
+                st.session_state.page = "login"
+                st.rerun()
+        elif page == "teacher_register":
+            page_teacher_register()
             st.markdown("---")
             if st.button("← 로그인으로 돌아가기", use_container_width=True):
                 st.session_state.page = "login"
