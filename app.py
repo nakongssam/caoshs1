@@ -208,6 +208,12 @@ html, body, [class*="css"] {
     border-radius: 8px !important;
 }
 
+/* ─── 개인 코드 카드: msg-wrap 다음 container에 초록 라인 ─── */
+.msg-wrap + div [data-testid="stVerticalBlockBorderWrapper"] {
+    border-left: 4px solid #4CAF50 !important;
+    border-radius: 0 10px 10px 0 !important;
+}
+
 /* ─── 코드 카드 내 코드 영역 ─── */
 .code-card-code {
     border-left: 4px solid #4CAF50;
@@ -625,23 +631,17 @@ def page_student_dashboard():
         if messages.data:
             for idx, m in enumerate(messages.data):
                 date_str = m["created_at"][:10] if m.get("created_at") else ""
-                content_html = f"""
-                <div class="code-card" style="margin-bottom:0; border-radius:0 10px 0 0; border-bottom:none;">
-                    <h4>💌 {m['title']}</h4>
-                """
-                if m.get("message"):
-                    content_html += f"<p>{m['message']}</p>"
-                content_html += "</div>"
-                st.markdown(content_html, unsafe_allow_html=True)
-                if m.get("code"):
-                    st.markdown('<div class="code-card-code">', unsafe_allow_html=True)
-                    st.code(m["code"], language=None)
-                    st.markdown('</div>', unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="code-card" style="margin-top:0; border-radius:0 0 10px 0; border-top:none; padding-top:0;">
-                    <div class="notice-date" style="color:#999;">{date_str}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                # 각 메시지를 div로 감싸서 이후 container에 초록 라인 적용
+                st.markdown('<div class="msg-wrap"></div>', unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.markdown(f'<h4 style="margin:0 0 0.4rem; color:#333; font-size:1rem; font-weight:600;">💌 {m["title"]}</h4>', unsafe_allow_html=True)
+                    if m.get("message"):
+                        st.markdown(f'<p style="margin:0 0 0.5rem; color:#555; font-size:0.9rem; line-height:1.6;">{m["message"]}</p>', unsafe_allow_html=True)
+                    if m.get("code"):
+                        st.markdown('<div style="font-size:0.8rem; color:#666; font-weight:600; margin-top:0.5rem;">📌 개인 코드 (복사 가능)</div>', unsafe_allow_html=True)
+                        st.code(m["code"], language=None)
+                    st.markdown(f'<div style="color:#999; font-size:0.75rem; margin-top:0.3rem;">{date_str}</div>', unsafe_allow_html=True)
+                st.markdown('<div style="margin-bottom:1rem;"></div>', unsafe_allow_html=True)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
