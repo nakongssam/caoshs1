@@ -634,13 +634,12 @@ def page_student_dashboard():
                 st.markdown('<div class="msg-wrap"></div>', unsafe_allow_html=True)
                 with st.container(border=True):
                     st.markdown(f'<h4 style="margin:0 0 0.4rem; color:#333; font-size:1rem; font-weight:600;">💌 {m["title"]}</h4>', unsafe_allow_html=True)
-                    if m.get("message"):
-                        # HTML escape 후 줄바꿈 처리
-                        msg_text = str(m["message"]).replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-                        st.markdown(f'<div style="margin:0 0 0.5rem; color:#555; font-size:0.9rem; line-height:1.6;">{msg_text}</div>', unsafe_allow_html=True)
                     if m.get("code"):
                         st.markdown('<div style="font-size:0.8rem; color:#666; font-weight:600; margin-top:0.5rem;">📌 개인 코드 (복사 가능)</div>', unsafe_allow_html=True)
                         st.code(m["code"], language=None)
+                    if m.get("message"):
+                        msg_text = str(m["message"]).replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                        st.markdown(f'<div style="margin:0.5rem 0; color:#555; font-size:0.9rem; line-height:1.6;">{msg_text}</div>', unsafe_allow_html=True)
                     st.markdown(f'<div style="color:#999; font-size:0.75rem; margin-top:0.3rem;">{date_str}</div>', unsafe_allow_html=True)
                 st.markdown('<div style="margin-bottom:1rem;"></div>', unsafe_allow_html=True)
         else:
