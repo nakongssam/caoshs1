@@ -542,7 +542,7 @@ def page_student_dashboard():
                     .limit(20)
                     .execute())
         if messages.data:
-            for m in messages.data:
+            for idx, m in enumerate(messages.data):
                 date_str = m["created_at"][:10] if m.get("created_at") else ""
                 content_html = f"""
                 <div class="code-card">
@@ -551,9 +551,13 @@ def page_student_dashboard():
                 if m.get("message"):
                     content_html += f"<p>{m['message']}</p>"
                 if m.get("code"):
-                    content_html += f'<div class="code-block">{m["code"]}</div>'
+                    content_html += f'<div class="code-block" id="code_{idx}">{m["code"]}</div>'
                 content_html += f'<div class="notice-date" style="color:#999; margin-top:0.5rem;">{date_str}</div></div>'
                 st.markdown(content_html, unsafe_allow_html=True)
+                if m.get("code"):
+                    if st.button("📋 코드 복사", key=f"copy_{m['id']}", use_container_width=False):
+                        st.code(m["code"])
+                        st.toast("코드를 길게 눌러 복사하세요!")
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
@@ -725,44 +729,59 @@ def page_admin_dashboard():
             }).execute()
             st.success(f"✅ {msg_grade}-{msg_class}반 {msg_num}번에게 전송 완료!")
 
-        # CSV 일괄 전송 기능
+        # CSV/엑셀 일괄 전송 기능
         st.markdown("---")
-        st.subheader("📦 CSV로 일괄 전송")
-        st.caption("CSV 파일을 업로드하면 학생별로 개인 코드를 자동 저장합니다. 학생 가입 전에도 가능!")
+        st.subheader("📦 파일로 일괄 전송")
+        st.caption("CSV 또는 엑셀(xlsx) 파일을 업로드하면 학생별로 개인 코드를 자동 저장합니다.")
 
-        with st.expander("📄 CSV 파일 양식 보기"):
+        with st.expander("📄 파일 양식 보기 / 양식 다운로드"):
             st.markdown("""
-            CSV 파일에 아래 열을 포함해주세요:
+            파일에 아래 열을 포함해주세요:
             
             | 학년 | 반 | 번호 | 코드 |
             |------|-----|------|------|
             | 1 | 7 | 1 | ABC123 |
             | 1 | 7 | 2 | DEF456 |
             
-            - **첫 줄은 헤더**: `학년,반,번호,코드` (또는 영어: `grade,class,number,code`)
+            - **첫 줄은 헤더**: `학년,반,번호,코드`
             - **메시지 열 추가 가능**: `학년,반,번호,코드,메시지`
             """)
+            # CSV 양식 다운로드
+            import pandas as pd
+            template_df = pd.DataFrame({
+                "학년": [1, 1, 1],
+                "반": [1, 1, 1],
+                "번호": [1, 2, 3],
+                "코드": ["코드입력", "코드입력", "코드입력"],
+                "메시지": ["", "", ""]
+            })
+            csv_template = template_df.to_csv(index=False).encode("utf-8-sig")
+            st.download_button("📥 CSV 양식 다운로드", csv_template, "코드전송_양식.csv", "text/csv", use_container_width=True)
 
         with st.form("csv_bulk_form"):
             csv_title = st.text_input("전송 제목", key="csv_title", placeholder="예: 개인 인증코드")
             csv_message = st.text_area("공통 메시지 (선택)", key="csv_msg", placeholder="예: 아래 코드를 사용하세요.")
-            csv_file = st.file_uploader("CSV 파일 업로드", type=["csv"], key="csv_upload")
-            csv_submit = st.form_submit_button("CSV로 일괄 전송", use_container_width=True)
+            csv_file = st.file_uploader("파일 업로드", type=["csv", "xlsx", "xls"], key="csv_upload")
+            csv_submit = st.form_submit_button("일괄 전송", use_container_width=True)
 
         if csv_submit and csv_title and csv_file:
             import pandas as pd
             import io
             try:
-                raw = csv_file.read()
-                for enc in ["utf-8-sig", "utf-8", "euc-kr", "cp949"]:
-                    try:
-                        text = raw.decode(enc)
-                        break
-                    except (UnicodeDecodeError, LookupError):
-                        continue
+                file_name = csv_file.name.lower()
+                if file_name.endswith((".xlsx", ".xls")):
+                    df = pd.read_excel(csv_file)
                 else:
-                    text = raw.decode("utf-8", errors="replace")
-                df = pd.read_csv(io.StringIO(text))
+                    raw = csv_file.read()
+                    for enc in ["utf-8-sig", "utf-8", "euc-kr", "cp949"]:
+                        try:
+                            text = raw.decode(enc)
+                            break
+                        except (UnicodeDecodeError, LookupError):
+                            continue
+                    else:
+                        text = raw.decode("utf-8", errors="replace")
+                    df = pd.read_csv(io.StringIO(text))
                 col_map = {
                     "학년": "grade", "반": "class", "번호": "number", "코드": "code", "메시지": "message",
                     "class_num": "class", "student_num": "number",
@@ -886,22 +905,32 @@ def page_admin_dashboard():
         # 통계
         if students.data:
             total = len(students.data)
-            classes = set(f"{s['grade']}-{s['class_num']}" for s in students.data)
+            class_set = set((s['grade'], s['class_num']) for s in students.data)
+            class_sorted = sorted(class_set, key=lambda x: (x[0], x[1]))
+
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"""
                 <div class="stat-box">
                     <h2>{total}</h2>
-                    <p>전체 학생 수</p>
+                    <p>전체 가입 학생 수</p>
                 </div>
                 """, unsafe_allow_html=True)
             with col2:
                 st.markdown(f"""
                 <div class="stat-box">
-                    <h2>{len(classes)}</h2>
+                    <h2>{len(class_sorted)}</h2>
                     <p>학급 수</p>
                 </div>
                 """, unsafe_allow_html=True)
+
+            # 반별 가입 현황
+            with st.expander("📊 반별 가입 현황"):
+                for g, c in class_sorted:
+                    class_students = [s for s in students.data if s['grade'] == g and s['class_num'] == c]
+                    registered_nums = sorted([s['student_num'] for s in class_students])
+                    st.markdown(f"**{g}-{c}반**: {len(class_students)}명 가입")
+                    st.caption(f"  가입: {', '.join(str(n) + '번' for n in registered_nums)}")
 
             st.markdown("---")
 
