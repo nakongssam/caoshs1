@@ -550,14 +550,10 @@ def page_student_dashboard():
                 """
                 if m.get("message"):
                     content_html += f"<p>{m['message']}</p>"
-                if m.get("code"):
-                    content_html += f'<div class="code-block" id="code_{idx}">{m["code"]}</div>'
                 content_html += f'<div class="notice-date" style="color:#999; margin-top:0.5rem;">{date_str}</div></div>'
                 st.markdown(content_html, unsafe_allow_html=True)
                 if m.get("code"):
-                    if st.button("📋 코드 복사", key=f"copy_{m['id']}", use_container_width=False):
-                        st.code(m["code"])
-                        st.toast("코드를 길게 눌러 복사하세요!")
+                    st.code(m["code"], language=None)
         else:
             st.info("아직 받은 개인 코드/메시지가 없습니다.")
 
