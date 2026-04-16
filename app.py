@@ -1299,8 +1299,14 @@ def page_admin_dashboard():
                     if s['student_num'] in class_moods:
                         mood_emoji = class_moods[s['student_num']]['mood']
                     else:
-                        mood_emoji = "　"  # 전각 공백 (간격 유지용)
-                    st.markdown(f"{mood_emoji}  {s['student_num']}번 {s['name']}")
+                        mood_emoji = ""
+                    st.markdown(
+                        f'<div style="display:flex; align-items:center; margin-bottom:0.3rem;">'
+                        f'<span style="display:inline-block; width:2.2rem; font-size:1.2rem;">{mood_emoji}</span>'
+                        f'<span>{s["student_num"]}번 {s["name"]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
 
 
 # ═══════════════════════════════════════
