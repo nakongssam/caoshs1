@@ -197,6 +197,11 @@ html, body, [class*="css"] {
     border-radius: 8px !important;
 }
 
+/* ─── 코드 복사 버튼 항상 표시 ─── */
+[data-testid="stCode"] button {
+    opacity: 1 !important;
+}
+
 /* ─── 반응형 ─── */
 @media (max-width: 768px) {
     .main-title {
