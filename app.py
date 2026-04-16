@@ -629,7 +629,7 @@ def page_student_dashboard():
 def page_admin_dashboard():
     if st.session_state.role == "teacher":
         display_name = st.session_state.user.get("name", "선생님")
-        st.markdown(f'<div class="main-title">⚙️ {display_name} 선생님</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="main-title">📚 {display_name} 선생님</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="main-title">⚙️ 관리자 페이지</div>', unsafe_allow_html=True)
 
